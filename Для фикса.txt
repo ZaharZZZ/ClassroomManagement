@@ -1,0 +1,3 @@
+Администратор	admin	Admin123!
+Диспетчер	dispatcher	Disp123!
+Преподаватель	teacher1	Teacher123!
