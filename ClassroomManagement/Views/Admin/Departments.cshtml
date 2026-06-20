@@ -1,0 +1,196 @@
+﻿@model List<ClassroomManagement.Models.Entities.Department>
+@{
+    ViewData["Title"] = "Управление отделениями";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-diagram-3"></i> Управление отделениями</h4>
+    <button class="btn btn-success"
+            data-bs-toggle="modal" data-bs-target="#createDeptModal">
+        <i class="bi bi-plus-circle"></i> Добавить отделение
+    </button>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Отделений пока нет.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Наименование</th>
+                    <th>Аббревиатура</th>
+                    <th>Заведующий</th>
+                    <th>Преподавателей</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var dept in Model)
+                {
+                    <tr>
+                        <td>@dept.Id</td>
+                        <td><strong>@dept.Name</strong></td>
+                        <td>
+                            <span class="badge bg-secondary">@dept.Abbreviation</span>
+                        </td>
+                        <td>@(dept.Head?.FullName ?? "—")</td>
+                        <td>
+                            <span class="badge bg-info text-dark">
+                                @dept.Teachers.Count
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary"
+                                    onclick="openEditDept(@dept.Id, '@dept.Name.Replace("'", "\\'")', '@dept.Abbreviation', @(dept.HeadId?.ToString() ?? "null"))"
+                                    title="Редактировать">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <form asp-action="DeleteDepartment" method="post"
+                                  style="display:inline;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@dept.Id" />
+                                <button type="submit"
+                                        class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Удалить отделение @dept.Name?')"
+                                        title="Удалить">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<!-- Модальное окно создания отделения -->
+<div class="modal fade" id="createDeptModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-plus-circle"></i> Новое отделение
+                </h5>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="CreateDepartment" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Наименование <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" name="Name" class="form-control"
+                               required maxlength="200"
+                               placeholder="Например: Заочное отделение" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Аббревиатура <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" name="Abbreviation" class="form-control"
+                               required maxlength="20"
+                               placeholder="Например: ЗО" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Заведующий</label>
+                        <select name="HeadId" class="form-select">
+                            <option value="">— Не назначен —</option>
+                            @foreach (var t in ViewBag.Teachers as IEnumerable<ClassroomManagement.Models.Entities.Teacher>
+                            ?? new List<ClassroomManagement.Models.Entities.Teacher>())
+                            {
+                                <option value="@t.Id">@t.FullName</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Отмена
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-save"></i> Создать
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно редактирования отделения -->
+<div class="modal fade" id="editDeptModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-pencil"></i> Редактировать отделение
+                </h5>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="EditDepartment" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="editDeptId" />
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Наименование <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" name="Name" id="editDeptName"
+                               class="form-control" required maxlength="200" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Аббревиатура <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" name="Abbreviation" id="editDeptAbbr"
+                               class="form-control" required maxlength="20" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Заведующий</label>
+                        <select name="HeadId" id="editDeptHead" class="form-select">
+                            <option value="">— Не назначен —</option>
+                            @foreach (var t in ViewBag.Teachers as IEnumerable<ClassroomManagement.Models.Entities.Teacher>
+                            ?? new List<ClassroomManagement.Models.Entities.Teacher>())
+                            {
+                                <option value="@t.Id">@t.FullName</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Отмена
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openEditDept(id, name, abbr, headId) {
+            document.getElementById('editDeptId').value = id;
+            document.getElementById('editDeptName').value = name;
+            document.getElementById('editDeptAbbr').value = abbr;
+            var headSelect = document.getElementById('editDeptHead');
+            headSelect.value = headId || '';
+            new bootstrap.Modal(document.getElementById('editDeptModal')).show();
+        }
+    </script>
+}

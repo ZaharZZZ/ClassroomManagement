@@ -1,0 +1,144 @@
+﻿@model List<ClassroomManagement.Models.ViewModels.BookingListItemViewModel>
+@{
+    ViewData["Title"] = "Заявки на резервирование";
+    var statusFilter = ViewBag.StatusFilter as string ?? "";
+    var dateFrom = ViewBag.DateFrom as string ?? "";
+    var dateTo = ViewBag.DateTo as string ?? "";
+    var pendingCount = ViewBag.PendingCount ?? 0;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-inbox"></i> Заявки на резервирование</h4>
+    <span class="badge bg-warning text-dark">На рассмотрении: @pendingCount</span>
+</div>
+
+<!-- Фильтры -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" asp-action="Index" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Статус</label>
+                <select name="status" class="form-select">
+                    <option value="">Все</option>
+                    <option value="Pending" selected="@(statusFilter == "Pending")">На рассмотрении</option>
+                    <option value="Approved" selected="@(statusFilter == "Approved")">Утверждённые</option>
+                    <option value="Rejected" selected="@(statusFilter == "Rejected")">Отклонённые</option>
+                    <option value="Cancelled" selected="@(statusFilter == "Cancelled")">Отменённые</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Дата от</label>
+                <input type="date" name="dateFrom" class="form-control" value="@dateFrom" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Дата до</label>
+                <input type="date" name="dateTo" class="form-control" value="@dateTo" />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel"></i> Применить фильтр
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Заявок по заданным критериям не найдено.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Преподаватель</th>
+                    <th>Дата</th>
+                    <th>Время</th>
+                    <th>Кабинет</th>
+                    <th>Цель</th>
+                    <th>Статус</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var booking in Model)
+                {
+                    <tr class="@(booking.IsUrgent ? "table-warning" : "")">
+                        <td>
+                            @booking.Id
+                            @if (booking.IsUrgent)
+                            {
+                                <span class="badge bg-danger ms-1" title="Срочная заявка">!</span>
+                            }
+                        </td>
+                        <td>@booking.TeacherName</td>
+                        <td>@booking.EventDate.ToString("dd.MM.yyyy")</td>
+                        <td>
+                            @if (booking.PairNumber.HasValue)
+                            {
+                                <span>@booking.PairNumber-я пара</span>
+                                <br />
+                            }
+                            <small class="text-muted">@booking.StartTime.ToString("HH:mm") – @booking.EndTime.ToString("HH:mm")</small>
+                        </td>
+                        <td>
+                            <strong>@booking.ClassroomNumber</strong>
+                            @if (!string.IsNullOrEmpty(booking.BuildingName))
+                            {
+                                <br /><small class="text-muted">@booking.BuildingName</small>
+                            }
+                        </td>
+                        <td>
+                            <span title="@booking.Purpose">
+                                @(booking.Purpose.Length > 40 ? booking.Purpose.Substring(0, 40) + "..." : booking.Purpose)
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge @booking.StatusClass">
+                                @switch (booking.StatusName)
+                                {
+                                    case "Pending":
+                                        <text><i class="bi bi-hourglass"></i> На рассмотрении</text>
+                                        break;
+                                    case "Approved":
+                                        <text><i class="bi bi-check-circle"></i> Утверждена</text>
+                                        break;
+                                    case "Rejected":
+                                        <text><i class="bi bi-x-circle"></i> Отклонена</text>
+                                        break;
+                                    case "Cancelled":
+                                        <text><i class="bi bi-dash-circle"></i> Отменена</text>
+                                        break;
+                                    default:
+                                        @booking.StatusName
+                                        break;
+                                }
+                            </span>
+                        </td>
+                        <td>
+                            @if (booking.StatusName == "Pending")
+                            {
+                                <a asp-action="ProcessBooking" asp-route-id="@booking.Id"
+                                   class="btn btn-sm btn-primary">
+                                    <i class="bi bi-pencil-square"></i> Обработать
+                                </a>
+                            }
+                            else
+                            {
+                                <a asp-action="ProcessBooking" asp-route-id="@booking.Id"
+                                   class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-eye"></i> Просмотр
+                                </a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

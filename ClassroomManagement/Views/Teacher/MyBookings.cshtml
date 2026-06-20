@@ -1,0 +1,139 @@
+﻿@model List<ClassroomManagement.Models.ViewModels.BookingListItemViewModel>
+@{
+    ViewData["Title"] = "Мои заявки";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-journal-text"></i> Мои заявки на резервирование</h4>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-calendar3"></i> К расписанию
+    </a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> У вас пока нет заявок.
+        Перейдите на <a asp-controller="Home" asp-action="Index">страницу расписания</a>
+        и нажмите на свободный кабинет для подачи заявки.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Дата</th>
+                    <th>Пара / Время</th>
+                    <th>Кабинет</th>
+                    <th>Цель</th>
+                    <th>Периодичность</th>
+                    <th>Статус</th>
+                    <th>Комментарий</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var booking in Model)
+                {
+                    <tr class="@(booking.IsUrgent ? "table-warning" : "")">
+                        <td>
+                            @booking.Id
+                            @if (booking.IsUrgent)
+                            {
+                                <span class="badge bg-danger ms-1" title="Срочная заявка">!</span>
+                            }
+                        </td>
+                        <td>@booking.EventDate.ToString("dd.MM.yyyy")</td>
+                        <td>
+                            @if (booking.PairNumber.HasValue)
+                            {
+                                <span>@booking.PairNumber-я пара</span>
+
+                                <br />
+                            }
+                            <small class="text-muted">
+                                @booking.StartTime.ToString("HH:mm") – @booking.EndTime.ToString("HH:mm")
+                            </small>
+                        </td>
+                        <td>
+                            <strong>@booking.ClassroomNumber</strong>
+                            @if (!string.IsNullOrEmpty(booking.BuildingName))
+                            {
+                                <br />
+
+                                <small class="text-muted">@booking.BuildingName</small>
+                            }
+                        </td>
+                        <td>
+                            <span title="@booking.Purpose">
+                                @(booking.Purpose.Length > 40
+                                    ? booking.Purpose[..40] + "..."
+                                    : booking.Purpose)
+                            </span>
+                        </td>
+                        <td>
+                            @switch (booking.Periodicity)
+                            {
+                                case "weekly":
+                                    <span class="badge bg-info text-dark">Еженедельно</span>
+                                    break;
+                                case "daily":
+                                    <span class="badge bg-info text-dark">Ежедневно</span>
+                                    break;
+                                default:
+                                    <span class="text-muted">Разово</span>
+                                    break;
+                            }
+                        </td>
+                        <td>
+                            <span class="badge @booking.StatusClass">
+                                @switch (booking.StatusName)
+                                {
+                                    case "Pending":
+                                        <text><i class="bi bi-hourglass"></i> На рассмотрении</text>
+                                        break;
+                                    case "Approved":
+                                        <text><i class="bi bi-check-circle"></i> Утверждена</text>
+                                        break;
+                                    case "Rejected":
+                                        <text><i class="bi bi-x-circle"></i> Отклонена</text>
+                                        break;
+                                    case "Cancelled":
+                                        <text><i class="bi bi-dash-circle"></i> Отменена</text>
+                                        break;
+                                }
+                            </span>
+                        </td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(booking.Comment))
+                            {
+                                <small class="text-muted" title="@booking.Comment">
+                                    @(booking.Comment.Length > 30
+                                        ? booking.Comment[..30] + "..."
+                                        : booking.Comment)
+                                </small>
+                            }
+                        </td>
+                        <td>
+                            @if (booking.StatusName == "Pending")
+                            {
+                                <form asp-controller="Teacher" asp-action="CancelBooking"
+                                      method="post" style="display:inline;">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="bookingId" value="@booking.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Отменить заявку?')">
+                                        <i class="bi bi-x"></i> Отменить
+                                    </button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

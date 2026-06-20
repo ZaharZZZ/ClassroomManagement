@@ -1,0 +1,151 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — Управление аудиторным фондом</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
+</head>
+<body>
+    @{
+        var role = Context.Session.GetString("UserRole");
+        var userName = Context.Session.GetString("UserFullName");
+        var isAuth = !string.IsNullOrEmpty(role);
+    }
+
+    @if (isAuth)
+    {
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+            <div class="container-fluid">
+                <a class="navbar-brand" asp-controller="Home" asp-action="Index">
+                    <i class="bi bi-building"></i> Аудиторный фонд
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#navbarMain">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarMain">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Home" asp-action="Index">
+                                <i class="bi bi-calendar3"></i> Расписание
+                            </a>
+                        </li>
+
+                        @if (role == "Teacher")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Teacher" asp-action="MyBookings">
+                                    <i class="bi bi-journal-text"></i> Мои заявки
+                                </a>
+                            </li>
+                        }
+
+                        @if (role == "Dispatcher" || role == "Admin")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Dispatcher" asp-action="Index">
+                                    <i class="bi bi-inbox"></i> Заявки
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Dispatcher" asp-action="Classrooms">
+                                    <i class="bi bi-door-open"></i> Кабинеты
+                                </a>
+                            </li>
+                        }
+
+                        @if (role == "Admin")
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                                    <i class="bi bi-gear"></i> Администрирование
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Admin" asp-action="Classrooms">
+                                            <i class="bi bi-door-open"></i> Управление кабинетами
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Admin" asp-action="Users">
+                                            <i class="bi bi-people"></i> Пользователи
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Admin" asp-action="Departments">
+                                            <i class="bi bi-diagram-3"></i> Отделения
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Admin" asp-action="AuditLog">
+                                            <i class="bi bi-list-ul"></i> Журнал аудита
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                    </ul>
+
+                    <ul class="navbar-nav">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-circle"></i> @userName
+                                @if (role == "Admin")
+                                {
+                                    <span class="badge bg-danger ms-1">Администратор</span>
+                                }
+                                else if (role == "Dispatcher")
+                                {
+                                    <span class="badge bg-warning text-dark ms-1">Диспетчер</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-info ms-1">Преподаватель</span>
+                                }
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item text-danger"
+                                       asp-controller="Account" asp-action="Logout">
+                                        <i class="bi bi-box-arrow-right"></i> Выйти
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    }
+
+    <div class="container-fluid mt-3">
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show">
+                <i class="bi bi-check-circle"></i> @TempData["Success"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show">
+                <i class="bi bi-exclamation-triangle"></i> @TempData["Error"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <main role="main">
+            @RenderBody()
+        </main>
+    </div>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,132 @@
+/* ================================================
+   СТИЛИ ДЛЯ СИСТЕМЫ УПРАВЛЕНИЯ АУДИТОРНЫМ ФОНДОМ
+   ================================================ */
+
+/* Ячейки кабинетов */
+.classroom-cell {
+    min-height: 80px;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+    .classroom-cell:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-color: rgba(0,0,0,0.2) !important;
+    }
+
+/* Свободный кабинет */
+.cell-free {
+    background-color: #d4edda;
+    border-color: #28a745 !important;
+    color: #155724;
+    cursor: pointer;
+}
+
+    .cell-free:hover {
+        background-color: #c3e6cb;
+    }
+
+/* Занятый кабинет */
+.cell-booked {
+    background-color: #f8d7da;
+    border-color: #dc3545 !important;
+    color: #721c24;
+    cursor: not-allowed;
+}
+
+/* Кабинет с заявкой */
+.cell-pending {
+    background-color: #fff3cd;
+    border-color: #ffc107 !important;
+    color: #856404;
+    cursor: default;
+}
+
+/* Долгосрочно закреплённый */
+.cell-longterm {
+    background-color: #d1ecf1;
+    border-color: #17a2b8 !important;
+    color: #0c5460;
+    cursor: default;
+}
+
+/* Легенда */
+.badge-legend {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    vertical-align: middle;
+    margin-right: 4px;
+    border: 2px solid transparent;
+}
+
+    .badge-legend.cell-free {
+        background-color: #d4edda;
+        border-color: #28a745;
+    }
+
+    .badge-legend.cell-booked {
+        background-color: #f8d7da;
+        border-color: #dc3545;
+    }
+
+    .badge-legend.cell-pending {
+        background-color: #fff3cd;
+        border-color: #ffc107;
+    }
+
+    .badge-legend.cell-longterm {
+        background-color: #d1ecf1;
+        border-color: #17a2b8;
+    }
+
+/* Заголовок отделения */
+.department-header {
+    transition: background-color 0.2s;
+}
+
+    .department-header:hover {
+        background-color: #495057 !important;
+    }
+
+/* Значки статусов заявок */
+.badge-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.badge-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.badge-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+/* Таблица расписания */
+.schedule-table th, .schedule-table td {
+    vertical-align: middle;
+    text-align: center;
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 576px) {
+    .classroom-cell {
+        min-height: 60px;
+        font-size: 0.85rem;
+    }
+
+        .classroom-cell .fs-5 {
+            font-size: 1rem !important;
+        }
+}

@@ -1,0 +1,441 @@
+﻿@model ClassroomManagement.Models.ViewModels.HomeViewModel
+@{
+    ViewData["Title"] = "Расписание аудиторного фонда";
+}
+
+@* CSRF токен для AJAX *@
+@Html.AntiForgeryToken()
+
+<!-- ЕДИНАЯ ФОРМА, содержащая все элементы управления -->
+<form method="get" asp-action="Index" id="scheduleForm">
+
+    <!-- ==================== ВЕРХНИЕ КАРТОЧКИ (дата + пары) ==================== -->
+    <div class="row align-items-center mb-3">
+        <!-- Карточка с датой -->
+        <div class="col-md-6">
+            <div class="card border-primary">
+                <div class="card-body py-2">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-auto">
+                            <h5 class="mb-0 text-primary fw-bold">
+                                <i class="bi bi-calendar-week"></i>
+                                @Model.DayOfWeekRu
+                            </h5>
+                            <small class="text-muted">@Model.FormattedDate</small>
+                        </div>
+                        <div class="col-auto">
+                            <input type="date"
+                                   name="date"
+                                   id="datePicker"
+                                   class="form-control"
+                                   value="@Model.SelectedDate.ToString("yyyy-MM-dd")"
+                                   onchange="this.form.submit()" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Карточка с выбором пары (кнопки) -->
+        <div class="col-md-6">
+            <div class="card border-info">
+                <div class="card-body py-2">
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <span class="text-muted me-1"><i class="bi bi-clock"></i> Пара:</span>
+                        @foreach (var pair in Model.Pairs)
+                        {
+                            <button type="button"
+                                    class="btn btn-sm @(pair.Number == Model.SelectedPair ? "btn-info text-white" : "btn-outline-info")"
+                                    onclick="selectPair(@pair.Number)">
+                                @pair.Number
+                                <small class="d-block" style="font-size:0.65rem;">
+                                    @pair.StartTime–@pair.EndTime
+                                </small>
+                            </button>
+                        }
+                    </div>
+                    @if (Model.CurrentPair != null)
+                    {
+                        <div class="mt-1">
+                            <span class="badge bg-info text-dark">
+                                <i class="bi bi-clock-fill"></i>
+                                @Model.CurrentPair.Number-я пара: @Model.CurrentPair.StartTime – @Model.CurrentPair.EndTime
+                            </span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== КАРТОЧКА ФИЛЬТРОВ ==================== -->
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <div class="row g-3 align-items-end">
+                <!-- Корпус -->
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Корпус</label>
+                    <select name="buildingId" class="form-select" onchange="this.form.submit()">
+                        <option value="">Все корпуса</option>
+                        @foreach (var building in Model.Buildings)
+                        {
+                            <option value="@building.Value" selected="@(building.Value == Model.SelectedBuildingId?.ToString())">
+                                @building.Text
+                            </option>
+                        }
+                    </select>
+                </div>
+                <!-- Этаж -->
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Этаж</label>
+                    <select name="floor" class="form-select" onchange="this.form.submit()">
+                        <option value="">Все этажи</option>
+                        @foreach (var floor in Model.Floors)
+                        {
+                            <option value="@floor.Value" selected="@(floor.Value == Model.SelectedFloor?.ToString())">
+                                @floor.Text
+                            </option>
+                        }
+                    </select>
+                </div>
+                <!-- Отделение -->
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Отделение</label>
+                    <select name="departmentId" class="form-select" onchange="this.form.submit()">
+                        <option value="">Все отделения</option>
+                        @foreach (var dept in Model.Departments)
+                        {
+                            <option value="@dept.Value" selected="@(dept.Value == Model.SelectedDepartmentId?.ToString())">
+                                @dept.Text
+                            </option>
+                        }
+                    </select>
+                </div>
+                <!-- Кнопка сброса -->
+                <div class="col-md-3">
+                    <a asp-action="Index" class="btn btn-outline-secondary w-100">Сбросить фильтры</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Скрытые поля для передачи параметров, которые не попали в select (например, пара уже есть в кнопках, но для надёжности добавим hidden) -->
+    <input type="hidden" name="pair" value="@Model.SelectedPair" id="hiddenPair" />
+
+</form>
+
+<!-- ==================== ЛЕГЕНДА ==================== -->
+<div class="d-flex flex-wrap gap-3 mb-3 p-2 bg-light rounded">
+    <span><span class="badge-legend cell-free"></span> Свободен</span>
+    <span><span class="badge-legend cell-booked"></span> Занят</span>
+    <span><span class="badge-legend cell-pending"></span> Есть заявка</span>
+    <span><span class="badge-legend cell-longterm"></span> Закреплён</span>
+    @{
+        var role = Context.Session.GetString("UserRole");
+    }
+    @if (role == "Teacher")
+    {
+        <span class="ms-auto text-success small">
+            <i class="bi bi-info-circle"></i>
+            Нажмите на <strong>зелёный</strong> кабинет чтобы подать заявку
+        </span>
+    }
+    else if (role == "Dispatcher" || role == "Admin")
+    {
+        <span class="ms-auto text-warning small">
+            <i class="bi bi-info-circle"></i>
+            Нажмите на <strong>зелёный</strong> кабинет чтобы назначить преподавателя
+        </span>
+    }
+</div>
+
+<!-- ==================== СЕТКА КАБИНЕТОВ ==================== -->
+@if (!Model.DepartmentGroups.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        Нет данных для отображения. Проверьте наличие отделений и кабинетов.
+    </div>
+}
+
+@foreach (var group in Model.DepartmentGroups)
+{
+    <div class="department-group mb-3">
+        <div class="department-header d-flex align-items-center p-2 bg-secondary text-white rounded-top"
+             style="cursor:pointer;"
+             data-bs-toggle="collapse"
+             data-bs-target="#dept-@group.DepartmentId">
+            <i class="bi bi-chevron-down me-2"></i>
+            <span class="fw-bold">
+                @group.DepartmentName (@group.DepartmentAbbreviation)
+            </span>
+            <span class="ms-3 badge bg-light text-dark">
+                <i class="bi bi-building"></i> @group.BuildingName
+            </span>
+            @if (group.Floor > 0)
+            {
+                <span class="ms-2 badge bg-light text-dark">
+                    @group.Floor этаж
+                </span>
+            }
+            <span class="ms-auto badge bg-white text-secondary">
+                @group.Classrooms.Count каб.
+            </span>
+        </div>
+
+        <div class="collapse show" id="dept-@group.DepartmentId">
+            <div class="border border-top-0 rounded-bottom p-3">
+                <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-2">
+                    @foreach (var cell in group.Classrooms)
+                    {
+                        <div class="col">
+                            <div class="classroom-cell @cell.CssClass p-2 rounded text-center position-relative"
+                                 data-classroom-id="@cell.ClassroomId"
+                                 data-date="@Model.SelectedDate.ToString("yyyy-MM-dd")"
+                                 data-pair="@Model.SelectedPair"
+                                 data-status="@cell.Status.ToString()">
+
+                                @if (cell.IsUrgent)
+                                {
+                                    <span class="position-absolute top-0 end-0 badge bg-danger"
+                                          style="font-size:0.6rem;">!</span>
+                                }
+
+                                <div class="fw-bold fs-5">@cell.ClassroomNumber</div>
+                                <div class="small text-muted">@cell.Capacity мест</div>
+                                <div class="small mt-1">@cell.StatusText</div>
+
+                                @if (cell.Status != ClassroomManagement.Models.ViewModels.CellStatus.Free)
+                                {
+                                    <div class="tooltip-info d-none"
+                                         data-teacher="@cell.TeacherName"
+                                         data-purpose="@cell.Purpose"
+                                         data-longterm="@cell.LongTermInfo">
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ==================== МОДАЛЬНЫЕ ОКНА ==================== -->
+<!-- Модальное окно для форм -->
+<div class="modal fade" id="bookingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="bookingModalTitle">
+                    <i class="bi bi-calendar-plus"></i> Действие с кабинетом
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="bookingFormContainer">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно информации -->
+<div class="modal fade" id="cellInfoModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title" id="cellInfoTitle">Информация</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="cellInfoBody"></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function() {
+            'use strict';
+
+            var USER_ROLE = '@Context.Session.GetString("UserRole")';
+
+            // -----------------------------------------------
+            // Функция выбора пары (отправляет форму)
+            // -----------------------------------------------
+            window.selectPair = function(pairNumber) {
+                document.getElementById('hiddenPair').value = pairNumber;
+                document.getElementById('scheduleForm').submit();
+            };
+
+            // -----------------------------------------------
+            // Обработчики кликов и наведения на ячейки
+            // -----------------------------------------------
+            document.querySelectorAll('.classroom-cell').forEach(function(cell) {
+
+                cell.addEventListener('click', function() {
+                    var status      = this.dataset.status;
+                    var classroomId = this.dataset.classroomId;
+                    var date        = this.dataset.date;
+                    var pair        = this.dataset.pair;
+
+                    if (status !== 'Free') {
+                        showCellInfo(classroomId, date, pair, this);
+                        return;
+                    }
+
+                    if (USER_ROLE === 'Teacher') {
+                        loadModalForm(
+                            '/Home/BookingForm?classroomId=' + classroomId +
+                            '&date=' + date + '&pair=' + pair,
+                            'Подать заявку на кабинет'
+                        );
+                    } else if (USER_ROLE === 'Dispatcher' || USER_ROLE === 'Admin') {
+                        loadModalForm(
+                            '/Dispatcher/AssignForm?classroomId=' + classroomId +
+                            '&date=' + date + '&pair=' + pair,
+                            'Назначить кабинет преподавателю'
+                        );
+                    } else {
+                        alert('Кабинет свободен.\nДля подачи заявки войдите как преподаватель.');
+                    }
+                });
+
+                // Всплывающая подсказка при наведении (исправленное позиционирование)
+                cell.addEventListener('mouseenter', function(event) {
+                    if (this.dataset.status === 'Free') return;
+                    var tip = this.querySelector('.tooltip-info');
+                    if (!tip) return;
+
+                    var teacher  = tip.dataset.teacher  || '';
+                    var purpose  = tip.dataset.purpose  || '';
+                    var longterm = tip.dataset.longterm || '';
+
+                    if (!teacher && !purpose && !longterm) return;
+
+                    var popup = document.createElement('div');
+                    popup.className = 'cell-tooltip-popup';
+                    var html = '';
+                    if (teacher)  html += '<b>' + teacher + '</b><br>';
+                    if (purpose)  html += purpose + '<br>';
+                    if (longterm) html += '<i>Закреплён: ' + longterm + '</i>';
+                    popup.innerHTML = html;
+
+                    // Позиционирование относительно курсора
+                    var mouseX = event.clientX;
+                    var mouseY = event.clientY;
+                    popup.style.cssText =
+                        'position:fixed; z-index:9999; background:rgba(0,0,0,0.85); color:#fff;' +
+                        'padding:8px 12px; border-radius:8px; font-size:0.8rem;' +
+                        'max-width:220px; pointer-events:none; box-shadow:0 4px 12px rgba(0,0,0,0.3);' +
+                        'white-space:normal; word-wrap:break-word;';
+                    popup.style.left = (mouseX + 15) + 'px';
+                    popup.style.top = (mouseY - 30) + 'px';
+                    document.body.appendChild(popup);
+
+                    // Запоминаем попап для удаления
+                    this._tooltip = popup;
+                });
+
+                cell.addEventListener('mouseleave', function() {
+                    if (this._tooltip) {
+                        this._tooltip.remove();
+                        this._tooltip = null;
+                    }
+                });
+            });
+
+            // -----------------------------------------------
+            // Функция загрузки формы в модальное окно
+            // -----------------------------------------------
+            function loadModalForm(url, title) {
+                var modalEl   = document.getElementById('bookingModal');
+                var titleEl   = document.getElementById('bookingModalTitle');
+                var container = document.getElementById('bookingFormContainer');
+
+                if (titleEl) titleEl.textContent = title;
+
+                container.innerHTML =
+                    '<div class="text-center py-4">' +
+                    '<div class="spinner-border text-primary"></div>' +
+                    '<p class="mt-2 text-muted small">Загрузка...</p>' +
+                    '</div>';
+
+                var modal = new bootstrap.Modal(modalEl);
+                modal.show();
+
+                fetch(url, {
+                    method: 'GET',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(response) {
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return response.text();
+                })
+                .then(function(html) {
+                    container.innerHTML = html;
+
+                    // Выполняем все скрипты из загруженного фрагмента
+                    var scripts = container.querySelectorAll('script');
+                    scripts.forEach(function(oldScript) {
+                        var newScript = document.createElement('script');
+                        Array.from(oldScript.attributes).forEach(function(attr) {
+                            newScript.setAttribute(attr.name, attr.value);
+                        });
+                        newScript.textContent = oldScript.textContent;
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    });
+                })
+                .catch(function(err) {
+                    console.error('Ошибка загрузки формы:', err);
+                    container.innerHTML =
+                        '<div class="alert alert-danger m-3">' +
+                        '<i class="bi bi-exclamation-triangle"></i> ' +
+                        'Ошибка загрузки: ' + err.message + '</div>';
+                });
+            }
+
+            // -----------------------------------------------
+            // Функция показа информации о занятом кабинете
+            // -----------------------------------------------
+            function showCellInfo(classroomId, date, pair, cellEl) {
+                var modalEl = document.getElementById('cellInfoModal');
+                var body    = document.getElementById('cellInfoBody');
+                var title   = document.getElementById('cellInfoTitle');
+                var numEl   = cellEl.querySelector('.fw-bold');
+
+                title.textContent = 'Кабинет ' + (numEl ? numEl.textContent.trim() : classroomId);
+                body.innerHTML =
+                    '<div class="text-center py-2">' +
+                    '<div class="spinner-border spinner-border-sm"></div></div>';
+
+                var modal = new bootstrap.Modal(modalEl);
+                modal.show();
+
+                fetch('/Home/CellInfo?classroomId=' + classroomId +
+                      '&date=' + date + '&pair=' + pair)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data) {
+                        body.innerHTML = '<p class="text-muted">Нет данных</p>';
+                        return;
+                    }
+                    var badges = {
+                        'Booked':   '<span class="badge bg-danger">Занят</span>',
+                        'Pending':  '<span class="badge bg-warning text-dark">Есть заявка</span>',
+                        'LongTerm': '<span class="badge bg-secondary">Закреплён</span>'
+                    };
+                    var html = '<p>' + (badges[data.status] || '') + '</p>';
+                    if (data.teacherName)  html += '<p><b>Преподаватель:</b> ' + data.teacherName + '</p>';
+                    if (data.purpose)      html += '<p><b>Цель:</b> ' + data.purpose + '</p>';
+                    if (data.longTermInfo) html += '<p><b>Закреплён за:</b> ' + data.longTermInfo + '</p>';
+                    if (data.isUrgent)     html += '<p><span class="badge bg-danger">СРОЧНАЯ</span></p>';
+                    body.innerHTML = html;
+                })
+                .catch(function() {
+                    body.innerHTML = '<p class="text-danger">Ошибка загрузки данных</p>';
+                });
+            }
+
+        })();
+    </script>
+}

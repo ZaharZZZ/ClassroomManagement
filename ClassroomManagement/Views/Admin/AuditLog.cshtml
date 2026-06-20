@@ -1,0 +1,109 @@
+﻿@model List<ClassroomManagement.Models.Entities.AuditLog>
+@{
+    ViewData["Title"] = "Журнал аудита";
+    int currentPage = ViewBag.CurrentPage ?? 1;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4><i class="bi bi-list-ul"></i> Журнал аудита системы</h4>
+    <span class="text-muted small">Страница @currentPage</span>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Записей в журнале нет.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover table-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Дата и время</th>
+                    <th>Пользователь</th>
+                    <th>Действие</th>
+                    <th>Детали</th>
+                    <th>IP-адрес</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var log in Model)
+                {
+                    <tr>
+                        <td><small>@log.Id</small></td>
+                        <td>
+                            <small>@log.CreatedAt.ToString("dd.MM.yyyy HH:mm:ss")</small>
+                        </td>
+                        <td>
+                            <small>@(log.User?.Login ?? "Система")</small>
+                        </td>
+                        <td>
+                            @{
+                                string actionBadge = log.Action switch
+                                {
+                                    "Login" => "bg-success",
+                                    "Logout" => "bg-secondary",
+                                    "CreateBooking" => "bg-primary",
+                                    "ApproveBooking" => "bg-success",
+                                    "RejectBooking" => "bg-danger",
+                                    "CreateClassroom" => "bg-info text-dark",
+                                    "UpdateClassroom" => "bg-warning text-dark",
+                                    "DeleteClassroom" => "bg-danger",
+                                    "CreateUser" => "bg-info text-dark",
+                                    "BlockUser" => "bg-danger",
+                                    "UnblockUser" => "bg-success",
+                                    _ => "bg-secondary"
+                                };
+                            }
+                            <span class="badge @actionBadge">
+                                <small>@log.Action</small>
+                            </span>
+                        </td>
+                        <td>
+                            <small class="text-muted" title="@log.Details">
+                                @(log.Details != null && log.Details.Length > 60
+                                    ? log.Details[..60] + "..."
+                                    : log.Details ?? "—")
+                            </small>
+                        </td>
+                        <td>
+                            <small class="text-muted">@(log.IpAddress ?? "—")</small>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Пагинация -->
+    <nav>
+        <ul class="pagination pagination-sm justify-content-center">
+            @if (currentPage > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link"
+                       asp-action="AuditLog"
+                       asp-route-page="@(currentPage - 1)">
+                        ← Назад
+                    </a>
+                </li>
+            }
+            <li class="page-item active">
+                <span class="page-link">@currentPage</span>
+            </li>
+            @if (Model.Count == 50)
+            {
+                <li class="page-item">
+                    <a class="page-link"
+                       asp-action="AuditLog"
+                       asp-route-page="@(currentPage + 1)">
+                        Вперёд →
+                    </a>
+                </li>
+            }
+        </ul>
+    </nav>
+}

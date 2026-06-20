@@ -1,0 +1,246 @@
+﻿@model ClassroomManagement.Models.ViewModels.DispatcherCreateBookingViewModel
+@{
+    string displayDate = Model.EventDateStr;
+    if (DateOnly.TryParse(Model.EventDateStr, out var pd))
+    {
+        displayDate = pd.ToString("dd.MM.yyyy");
+    }
+}
+
+<div class="alert alert-warning py-2 mb-3">
+    <i class="bi bi-person-check-fill"></i>
+    <strong>Режим диспетчера</strong> — назначение вступает в силу немедленно.
+</div>
+
+<!-- Информация о кабинете -->
+<div class="card mb-3 border-primary">
+    <div class="card-header bg-primary text-white py-2">
+        <i class="bi bi-door-open"></i>
+        Кабинет <strong>@Model.ClassroomNumber</strong>
+    </div>
+    <div class="card-body py-2">
+        <div class="row g-2">
+            <div class="col-6">
+                <small class="text-muted d-block">Дата:</small>
+                <strong>@displayDate</strong>
+            </div>
+            <div class="col-6">
+                <small class="text-muted d-block">Пара:</small>
+                <strong>@Model.PairTime</strong>
+            </div>
+            <div class="col-6">
+                <small class="text-muted d-block">Вместимость:</small>
+                <strong>@Model.ClassroomCapacity мест</strong>
+            </div>
+            <div class="col-6">
+                <small class="text-muted d-block">Тип:</small>
+                <strong>@Model.RoomTypeName</strong>
+            </div>
+        </div>
+
+        @if (Model.ClassroomEquipments.Any())
+        {
+            <hr class="my-2" />
+            <small class="text-muted d-block mb-1">
+                <i class="bi bi-tools"></i> Оснащение:
+            </small>
+            <div class="d-flex flex-wrap gap-1">
+                @foreach (var eq in Model.ClassroomEquipments)
+                {
+                    <span class="badge bg-info text-dark">
+                        <i class="bi bi-check2"></i> @eq
+                    </span>
+                }
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.EquipmentNote))
+        {
+            <div class="mt-2">
+                <small class="text-muted fst-italic">
+                    <i class="bi bi-info-circle"></i> @Model.EquipmentNote
+                </small>
+            </div>
+        }
+    </div>
+</div>
+
+<div id="assignFormMessage"></div>
+
+<!-- Преподаватель -->
+<div class="mb-3">
+    <label class="form-label fw-semibold">
+        <i class="bi bi-person"></i>
+        Преподаватель <span class="text-danger">*</span>
+    </label>
+    <select id="afTeacherId" class="form-select">
+        <option value="">— Выберите преподавателя —</option>
+        @foreach (var item in Model.TeachersList)
+        {
+            <option value="@item.Value">@item.Text</option>
+        }
+    </select>
+</div>
+
+<!-- Цель -->
+<div class="mb-3">
+    <label class="form-label fw-semibold">
+        <i class="bi bi-chat-text"></i>
+        Цель резервирования <span class="text-danger">*</span>
+    </label>
+    <textarea id="afPurpose" class="form-control" rows="3"
+              placeholder="Практическое занятие, лекция..."
+              maxlength="500"></textarea>
+    <div class="form-text">До 500 символов</div>
+</div>
+
+<!-- Периодичность -->
+<div class="mb-3">
+    <label class="form-label fw-semibold">
+        <i class="bi bi-arrow-repeat"></i> Периодичность
+    </label>
+    <select id="afPeriodicity" class="form-select"
+            onchange="afTogglePeriod(this.value)">
+        <option value="once">Разово</option>
+        <option value="weekly">Еженедельно</option>
+        <option value="daily">Ежедневно (на неделю)</option>
+    </select>
+</div>
+
+<div class="mb-3 d-none" id="afPeriodEndBlock">
+    <label class="form-label fw-semibold">Дата окончания периода</label>
+    <input type="date" id="afPeriodEnd" class="form-control"
+           min="@Model.EventDateStr" />
+</div>
+
+<!-- Скрытые данные -->
+<span id="afData"
+      data-classroom-id="@Model.ClassroomId"
+      data-classroom-number="@Model.ClassroomNumber"
+      data-event-date="@Model.EventDateStr"
+      data-start-time="@Model.StartTimeStr"
+      data-end-time="@Model.EndTimeStr"
+      data-pair-number="@Model.PairNumber">
+</span>
+
+<div class="d-flex gap-2 justify-content-end mt-3">
+    <button type="button" class="btn btn-secondary"
+            data-bs-dismiss="modal">
+        <i class="bi bi-x"></i> Отмена
+    </button>
+    <button type="button" class="btn btn-warning fw-semibold"
+            id="afSubmitBtn" onclick="afSubmit()">
+        <i class="bi bi-calendar-check"></i> Назначить кабинет
+    </button>
+</div>
+
+<script>
+    function afTogglePeriod(v) {
+        var b = document.getElementById('afPeriodEndBlock');
+        if (v !== 'once') b.classList.remove('d-none');
+        else b.classList.add('d-none');
+    }
+
+    function afSubmit() {
+        var msg = document.getElementById('assignFormMessage');
+        var btn = document.getElementById('afSubmitBtn');
+        var d   = document.getElementById('afData');
+
+        var classroomId = d.dataset.classroomId;
+        var eventDate   = d.dataset.eventDate;
+        var startTime   = d.dataset.startTime;
+        var endTime     = d.dataset.endTime;
+        var pairNumber  = d.dataset.pairNumber;
+        var teacherId   = document.getElementById('afTeacherId').value;
+        var purpose     = document.getElementById('afPurpose').value.trim();
+        var periodicity = document.getElementById('afPeriodicity').value;
+        var periodEnd   = document.getElementById('afPeriodEnd').value;
+
+        // Валидация
+        if (!teacherId) {
+            msg.innerHTML =
+                '<div class="alert alert-warning py-2">' +
+                '<i class="bi bi-exclamation-triangle"></i> ' +
+                'Выберите преподавателя</div>';
+            return;
+        }
+        if (!purpose) {
+            msg.innerHTML =
+                '<div class="alert alert-warning py-2">' +
+                '<i class="bi bi-exclamation-triangle"></i> ' +
+                'Укажите цель резервирования</div>';
+            return;
+        }
+        if (periodicity !== 'once' && !periodEnd) {
+            msg.innerHTML =
+                '<div class="alert alert-warning py-2">' +
+                '<i class="bi bi-exclamation-triangle"></i> ' +
+                'Укажите дату окончания периода</div>';
+            return;
+        }
+
+        msg.innerHTML =
+            '<div class="text-center py-2">' +
+            '<div class="spinner-border spinner-border-sm text-warning"></div>' +
+            ' Назначение кабинета...</div>';
+        btn.disabled = true;
+
+        // CSRF токен
+        var tokenEl = document.querySelector(
+            'input[name="__RequestVerificationToken"]');
+        var token = tokenEl ? tokenEl.value : '';
+
+        var params = new URLSearchParams();
+        params.append('classroomId',    classroomId);
+        params.append('teacherId',      teacherId);
+        params.append('eventDateStr',   eventDate);
+        params.append('startTimeStr',   startTime);
+        params.append('endTimeStr',     endTime);
+        params.append('pairNumber',     pairNumber);
+        params.append('purpose',        purpose);
+        params.append('periodicity',    periodicity);
+        if (periodEnd) params.append('periodEndDateStr', periodEnd);
+        if (token)     params.append('__RequestVerificationToken', token);
+
+        console.log('Назначение кабинета диспетчером:', params.toString());
+
+        fetch('/Dispatcher/AssignClassroom', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        })
+        .then(function(r) {
+            console.log('Ответ AssignClassroom:', r.status);
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
+        .then(function(result) {
+            console.log('Результат назначения:', result);
+            if (result.success) {
+                msg.innerHTML =
+                    '<div class="alert alert-success py-2">' +
+                    '<i class="bi bi-check-circle-fill"></i> ' +
+                    result.message + '</div>';
+                setTimeout(function() {
+                    var m = bootstrap.Modal.getInstance(
+                        document.getElementById('bookingModal'));
+                    if (m) m.hide();
+                    location.reload();
+                }, 2000);
+            } else {
+                msg.innerHTML =
+                    '<div class="alert alert-danger py-2">' +
+                    '<i class="bi bi-x-circle-fill"></i> ' +
+                    result.message + '</div>';
+                btn.disabled = false;
+            }
+        })
+        .catch(function(err) {
+            console.error('Ошибка назначения:', err);
+            msg.innerHTML =
+                '<div class="alert alert-danger py-2">' +
+                'Ошибка: ' + err.message + '</div>';
+            btn.disabled = false;
+        });
+    }
+</script>

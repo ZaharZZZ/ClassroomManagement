@@ -1,0 +1,123 @@
+﻿@model ClassroomManagement.Models.ViewModels.ProcessBookingViewModel
+@{
+    ViewData["Title"] = "Обработка заявки #" + Model.BookingId;
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-pencil-square"></i>
+                    Обработка заявки #@Model.BookingId
+                    @if (Model.BookingInfo?.IsUrgent == true)
+                    {
+                        <span class="badge bg-danger ms-2">СРОЧНАЯ</span>
+                    }
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Информация о заявке -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td class="text-muted">Преподаватель:</td>
+                                <td><strong>@Model.BookingInfo?.TeacherName</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Дата:</td>
+                                <td>@Model.BookingInfo?.EventDate.ToString("dd.MM.yyyy")</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Пара:</td>
+                                <td>
+                                    @Model.BookingInfo?.PairNumber-я пара
+                                    (@Model.BookingInfo?.StartTime.ToString("HH:mm") –
+                                    @Model.BookingInfo?.EndTime.ToString("HH:mm"))
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Запрошенный кабинет:</td>
+                                <td>@Model.BookingInfo?.ClassroomNumber</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded">
+                            <strong>Цель резервирования:</strong>
+                            <p class="mt-1 mb-0">@Model.BookingInfo?.Purpose</p>
+                        </div>
+                    </div>
+                </div>
+
+                <hr />
+
+                <!-- Форма утверждения -->
+                <h6 class="text-success"><i class="bi bi-check-circle"></i> Утвердить заявку</h6>
+                <form asp-action="ApproveBooking" method="post" class="mb-4">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="BookingId" value="@Model.BookingId" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Назначить кабинет <span class="text-danger">*</span></label>
+                        <select name="SelectedClassroomId" class="form-select" required>
+                            <option value="">— Выберите кабинет —</option>
+                            @if (Model.AvailableClassrooms != null)
+                            {
+                                foreach (var item in Model.AvailableClassrooms)
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
+                            }
+                        </select>
+                        @if (Model.AvailableClassrooms == null || !Model.AvailableClassrooms.Any())
+                        {
+                            <div class="text-warning mt-1">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                Нет свободных кабинетов на это время
+                            </div>
+                        }
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Комментарий (необязательно)</label>
+                        <input type="text" name="Comment" class="form-control"
+                               placeholder="Дополнительная информация..." maxlength="500" />
+                    </div>
+
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-lg"></i> Утвердить
+                    </button>
+                </form>
+
+                <hr />
+
+                <!-- Форма отклонения -->
+                <h6 class="text-danger"><i class="bi bi-x-circle"></i> Отклонить заявку</h6>
+                <form asp-action="RejectBooking" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="bookingId" value="@Model.BookingId" />
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Причина отклонения <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" name="reason" class="form-control" required
+                               placeholder="Укажите причину отклонения..." maxlength="500" />
+                    </div>
+
+                    <button type="submit" class="btn btn-danger"
+                            onclick="return confirm('Отклонить заявку?')">
+                        <i class="bi bi-x-lg"></i> ��тклонить
+                    </button>
+                </form>
+            </div>
+            <div class="card-footer">
+                <a asp-action="Index" class="btn btn-secondary btn-sm">
+                    <i class="bi bi-arrow-left"></i> Назад к списку
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

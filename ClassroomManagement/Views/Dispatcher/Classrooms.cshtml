@@ -1,0 +1,80 @@
+﻿@model List<ClassroomManagement.Models.Entities.Classroom>
+@{
+    ViewData["Title"] = "Оснащение кабинетов";
+}
+
+<h4 class="mb-3">
+    <i class="bi bi-door-open"></i> Оснащение кабинетов
+</h4>
+
+<div class="table-responsive">
+    <table class="table table-hover table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Кабинет</th>
+                <th>Корпус / Этаж</th>
+                <th>Тип</th>
+                <th>Вместимость</th>
+                <th>Состояние</th>
+                <th>Отделение</th>
+                <th>Оборудование</th>
+                <th>Закреплён за</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var c in Model)
+            {
+                    <tr>
+                        <td><strong>@c.Number</strong></td>
+                        <td>
+                        @c.Building.Name
+                            <br /><small class="text-muted">@c.Floor этаж</small>
+                        </td>
+                        <td>@c.RoomType.Name</td>
+                        <td>@c.Capacity мест</td>
+                        <td>
+                            <span class="badge @(c.Condition.Name == "Исправна" ? "bg-success" : "bg-danger")">
+                            @c.Condition.Name
+                            </span>
+                        </td>
+                        <td>@(c.Department?.Name ?? "—")</td>
+                        <td>
+                        @if (c.ClassroomEquipments.Any())
+                        {
+                                    <ul class="list-unstyled mb-0 small">
+                                @foreach (var eq in c.ClassroomEquipments)
+                                {
+                                                <li><i class="bi bi-check2"></i> @eq.Equipment.Name</li>
+                                }
+                                    </ul>
+                        }
+                        @if (!string.IsNullOrEmpty(c.EquipmentNote))
+                        {
+                                    <small class="text-muted">@c.EquipmentNote</small>
+                        }
+                        @if (!c.ClassroomEquipments.Any() && string.IsNullOrEmpty(c.EquipmentNote))
+                        {
+                                    <span class="text-muted">—</span>
+                        }
+                        </td>
+                        <td>
+                        @if (!string.IsNullOrEmpty(c.LongTermBookingBy))
+                        {
+                                    <span class="badge bg-secondary">@c.LongTermBookingBy</span>
+                            @if (c.LongTermUntil.HasValue)
+                            {
+                                            <br />
+
+                                <small>до @c.LongTermUntil.Value.ToString("dd.MM.yyyy")</small>
+                            }
+                        }
+                        else
+                        {
+                                    <span class="text-muted">—</span>
+                        }
+                        </td>
+                    </tr>
+            }
+        </tbody>
+    </table>
+</div>
