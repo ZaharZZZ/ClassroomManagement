@@ -81,6 +81,8 @@ namespace ClassroomManagement.Controllers
 
             if (!DateOnly.TryParse(date, out var dateOnly))
                 return Content("<div class='alert alert-danger'>Неверный формат даты</div>");
+            if (dateOnly.DayOfWeek == DayOfWeek.Sunday)
+                return Content("<div class='alert alert-danger'>Резервирование на воскресенье недоступно</div>");
 
             var pairs = await _scheduleService.GetPairsAsync();
             var selectedPair = pairs.FirstOrDefault(p => p.Number == pair);
@@ -142,6 +144,8 @@ namespace ClassroomManagement.Controllers
 
             if (!DateOnly.TryParse(eventDateStr, out var eventDate))
                 return Json(new { success = false, message = "Неверный формат даты" });
+            if (eventDate.DayOfWeek == DayOfWeek.Sunday)
+                return Json(new { success = false, message = "Резервирование на воскресенье запрещено" });
 
             if (!TimeOnly.TryParse(startTimeStr, out var startTime))
                 return Json(new { success = false, message = "Неверный формат времени начала" });

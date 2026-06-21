@@ -259,6 +259,23 @@
 
             var USER_ROLE = '@Context.Session.GetString("UserRole")';
 
+            // --- БЛОКИРОВКА ВЫБОРА ВОСКРЕСЕНЬЯ В КАЛЕНДАРЕ ---
+            document.addEventListener('DOMContentLoaded', function() {
+                var datePicker = document.getElementById('datePicker');
+                if (datePicker) {
+                    datePicker.addEventListener('input', function() {
+                        var selectedDate = new Date(this.value);
+                        if (selectedDate.getDay() === 0) {
+                            alert('Воскресенье недоступно для резервирования. Выберите другой день.');
+                            this.value = '';
+                            this.classList.add('is-invalid');
+                        } else {
+                            this.classList.remove('is-invalid');
+                        }
+                    });
+                }
+            });
+
             // -----------------------------------------------
             // Функция выбора пары (отправляет форму)
             // -----------------------------------------------
